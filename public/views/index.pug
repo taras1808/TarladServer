@@ -1,0 +1,10 @@
+html
+	head
+		title= "Hello world"
+		style= "*{margin:0; padding: 0} div div:nth-child(odd) {background: #fafafa} div div{padding: 15px}"
+	body
+		div(style="max-width: 500px; margin: auto")
+			each message in messages
+				div(style="display: flex; justify-content: space-between")
+					span(style="flex-shrink: 1")= message.data
+					span(style="flex-shrink: 0")= new Date(message.time).toUTCString().slice(5, 25)

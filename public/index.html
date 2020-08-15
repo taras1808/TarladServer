@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>WebSocket Chat Application </title>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.dev.js"></script>
+</head>
+<body>
+<div id="main-content" class="container">
+    <div class="row">
+        <div class="col-md-8">
+            <form class="form-inline">
+                <div class="form-group">
+                    <label for="connect">Chat Application:</label>
+                    <button id="connect" type="button">Start New Chat</button>
+                    <button id="disconnect" type="button" disabled="disabled">End Chat
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <table id="chat">
+                <thead>
+                <tr>
+                    <th>Welcome user. Please enter you name</th>
+                </tr>
+                </thead>
+                <tbody id="helloworldmessage">
+                </tbody>
+            </table>
+        </div>
+            <div class="row">
+        
+        <div class="col-md-6">
+            <form class="form-inline">
+                <div class="form-group">
+                    <textarea id="user" placeholder="Write your message here..." required></textarea>
+                    <textarea id="id" placeholder="Write your id here..." required></textarea>
+                </div>
+                <button type="button" id="send" type="button">Send</button>
+            </form>
+        </div>
+        </div>
+    </div>
+    <div id="text"></div>
+
+
+    <div>
+        <form method="DELETE" action="/w">
+            <input id="c" type="text" name="chat" placeholder="chat" value="5">
+            <input id="m" type="number" name="message" value="10057">
+            <input onClick="send()" type="button" value="Send">
+        </form>
+    </div>
+
+<script>
+    
+    function send(){
+        $.ajax({
+            method: "GET",
+            url: "http://localhost:3000/w?chat=" + $("#c").val() + "&message=" + $("#m").val()
+        });
+    }
+
+
+// ioClient = io.connect('http://localhost:3000', {
+//     transportOptions: {
+//         polling: {
+//             extraHeaders: {
+//                 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7InVzZXJJZCI6MX0sImlhdCI6MTU5Mzk4Mzg3MCwiZXhwIjoxNTkzOTg3NDcwfQ.nWOjaG3-hUYqK1lzkTT-pyMsUkMJDx-pdwpPvclcIro',
+//             }
+//         }
+//     }
+// })
+
+// ioClient.on('connect', () => {
+//     ioClient.emit('join', { userId:1 })
+// })
+
+// ioClient.on('message', msg => {
+//     $('#text').prepend('<div>' + msg.data + '</div>')
+// })
+
+// $("#send").on('click', () => {
+//     var text = $("#user").val()
+//     var id = $("#id").val()
+
+// 	var message = {
+//         chatId: 5,
+//         userId: id,
+// 		type: "text",
+// 		data: text,
+// 		time: new Date().getTime()
+// 	}
+//     ioClient.emit('messages', message)
+// });
+	
+</script>
+</div>
+</body>
+</html>
