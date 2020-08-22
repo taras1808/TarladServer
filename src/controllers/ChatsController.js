@@ -52,116 +52,13 @@ exports.create = async (req, res) => {
     const chat = await Chat.query().insert({ title: null })
 
     for (let userId of usersIds) {
-        // req.io.to('u' + userId).emit('join', userId)
+        req.io.to('u' + userId).emit('join', userId)
         await Chat.relatedQuery('users')
             .for(chat)
             .relate(userId);
     }
 
     res.json({ ...chat, users })
-}
-
-exports.getChats = async (req, res) => {
-    const userId = req.user.userId
-
-    const user = await User.query()
-        .where('id', userId)
-        .select('id')
-
-    const chats = await User.relatedQuery('chats')
-        .for(user)
-
-    for (let chat of chats) {
-        chat.users = await Chat.relatedQuery('users')
-            .for(chat)
-            .select('id', 'nickname', 'name', 'surname', 'image_url')
-    }
-
-    res.json(chats);
-}
-
-exports.getChat = async (req, res) => {
-    if (!req.params.chatId) {
-		res.status(400).send({
-			message: 'Content can not be empty!'
-		})
-		return
-    }
-
-    const userId = req.user.userId
-
-    const user = await User.query()
-        .where('id', userId)
-        .select('id')
-
-    const chat = await Chat.query()
-        .for(user)
-        .where('id', req.params.chatId)
-
-    chat[0].users = await Chat.relatedQuery('users')
-        .for(chat[0])
-        .select('id', 'nickname', 'name', 'surname', 'image_url')
-
-    res.json(chat[0]);
-}
-
-exports.getMessagesInChat = async (req, res) => {
-    if (!req.params.chatId) {
-		res.status(400).send({
-			message: 'Content can not be empty!'
-		})
-		return
-    }
-
-    const chatId = req.params.chatId
-    const after = req.query.after
-    const before = req.query.before
-    const page = req.query.page
-
-    if (before) {
-        Message.query()
-            .where('chat_id', chatId)
-            .where('time', '<', before)
-            .orderBy('time', 'desc')
-            .page(page, 10)
-            .then(data =>
-                res.json(data.results)
-            ).catch(err =>
-                res.send(err)
-            )
-    } else {
-        Message.query()
-            .where('chat_id', chatId)
-            .where('time', '>', after)
-            .orderBy('time', 'asc')
-            .page(page, 5)
-            .then(data =>
-                res.json(data.results)
-            ).catch(err =>
-                res.send(err)
-            )
-    }
-}
-
-exports.getLastMessagesInChat = async (req, res) => {
-    const chats = await User.relatedQuery('chats')
-        .for(req.user.userId)
-
-    const result = []
-        
-    for(let chat of chats){
-        const messages = await Chat.relatedQuery('messages')
-            .for(chat)
-            .orderBy('time', 'desc')
-            .limit(1)
-
-        if (messages.length > 0) {
-            chat.message = messages[0]
-            result.push(chat)
-        }
-    }
-    
-    res.json(result)
 }
 
 exports.addParticipants = async (req, res) => {
@@ -198,4 +95,4 @@ function arraysEqual(a, b) {
       if (a[i] !== b[i]) return false;
     }
     return true;
-  }
+}
