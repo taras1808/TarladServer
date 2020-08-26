@@ -14,12 +14,7 @@ app.use(express.static('public'))
 app.set('views', path.join(__dirname, 'views'))
 app.set('view engine', 'pug')
 
-app.use(function(req, res, next) {
-	req.io = io
-	next()
-})
 app.use('/api', apiRouter)
-
 
 http.listen(3000, function() {
   	console.log('Example app listening on port 3000!')
