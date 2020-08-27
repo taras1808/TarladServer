@@ -94,7 +94,9 @@ module.exports = (http) => {
                         .for(chat)
                         .select('user_id')
                 )
+                .whereNot('id', socket.user.userId)
                 .page(page, 10)
+                .orderBy('id')
                 .then(data => {
                     callback(data.results)
                 })
@@ -107,12 +109,12 @@ module.exports = (http) => {
                 .findOne('id', chatId)
         
             for (let userId of usersIds) {
-                io.to('u' + userId).emit('join', userId)
+                io.to('u' + userId).emit('join')
+                io.to('u' + userId).emit('chats/add', chat.id)
                 await Chat.relatedQuery('users')
                     .for(chat)
                     .relate(userId);
             }
-
             io.to(chatId).emit('chats/add', chat.id)
 
             callback()
@@ -122,7 +124,6 @@ module.exports = (http) => {
             Message.query()
                 .findOne('chat_id', chatId)
                 .orderBy('time', 'DESC')
-                .page(0, 1)
                 .then(data => callback(data))
         })
 
@@ -130,7 +131,7 @@ module.exports = (http) => {
 
             const userId = socket.user.userId
 
-            const user = await User.query()
+            const user = User.query()
                 .where('id', userId)
                 .select('id')
 
@@ -141,6 +142,7 @@ module.exports = (http) => {
             chat[0].users = await Chat.relatedQuery('users')
                 .for(chat[0])
                 .select('id', 'nickname', 'name', 'surname', 'image_url')
+                .whereNot('id', socket.user.userId)
 
             callback(chat[0])
         })
@@ -160,7 +162,7 @@ module.exports = (http) => {
             if (usersIds.includes(userId)) {
                 return
             }
-            
+
             usersIds.push(userId)
         
             const users = []
@@ -192,7 +194,7 @@ module.exports = (http) => {
                     .for(chat)
                     .relate(userId);
             }
-        
+
             callback({ ...chat, users })
         })
 
