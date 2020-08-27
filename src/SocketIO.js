@@ -74,6 +74,7 @@ module.exports = (http) => {
                 var chat = await Chat.query().findOne('id', message.chat_id)
                 var users = await Chat.relatedQuery('users')
                     .for(message.chat_id)
+                    .whereNot('id', socket.user.userId)
                     .select('id', 'nickname', 'name', 'surname', 'image_url')
                 result.push({id: chat.id, title: chat.title, message, users})
             }
@@ -100,22 +101,24 @@ module.exports = (http) => {
         })
 
         socket.on("chats/users/add", async (chatId, data, callback) => {
-            const usersIds = data
+            const usersIds = JSON.parse(data)
 
             const chat = await Chat.query()
-                .where('id', chatId)
+                .findOne('id', chatId)
         
             for (let userId of usersIds) {
-                req.io.to('u' + userId).emit('join', userId)
+                io.to('u' + userId).emit('join', userId)
                 await Chat.relatedQuery('users')
                     .for(chat)
                     .relate(userId);
             }
 
+            io.to(chatId).emit('chats/add', chat.id)
+
             callback()
         })
 
-        socket.on('chats/last', (chatId, callback) => {
+        socket.on('messages/last', (chatId, callback) => {
             Message.query()
                 .findOne('chat_id', chatId)
                 .orderBy('time', 'DESC')
@@ -184,7 +187,7 @@ module.exports = (http) => {
             const chat = await Chat.query().insert({ title: null })
         
             for (let userId of usersIds) {
-                req.io.to('u' + userId).emit('join', userId)
+                io.to('u' + userId).emit('join', userId)
                 await Chat.relatedQuery('users')
                     .for(chat)
                     .relate(userId);
