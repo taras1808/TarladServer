@@ -1,7 +1,8 @@
 const User = require('./models/User')
 const Message = require('./models/Message')
 const Chat = require('./models/Chat')
-const jwt = require('jsonwebtoken');
+const jwt = require('jsonwebtoken')
+var fs = require('fs')
 
 module.exports = (http) => {
     const io = require('socket.io')(http)
@@ -37,21 +38,7 @@ module.exports = (http) => {
                 })
         })
 
-        socket.on('messages', (msg, callback) => {
-            var message = {
-                chat_id: msg.chatId,
-                user_id: socket.user.userId,
-                data: msg.data,
-                type: msg.type,
-                time: msg.time
-            }
-            Message.query()
-                .insert(message)
-                .then(data => {
-                    callback(data)
-                    io.to(data.chat_id).emit('message', data)
-                })
-        })
+        
 
         socket.on('chats/messages/last', async (time, page, callback) => {
 
@@ -76,13 +63,13 @@ module.exports = (http) => {
                     .for(message.chat_id)
                     .whereNot('id', socket.user.userId)
                     .select('id', 'nickname', 'name', 'surname', 'image_url')
-                result.push({id: chat.id, title: chat.title, message, users})
+                result.push({id: chat.id, title: chat.title, userId: chat.user_id, message, users})
             }
 
             callback(result)
         })
 
-        socket.on("chats/users/search", (chatId, q, page, callback) => {
+        socket.on('chats/users/search', (chatId, q, page, callback) => {
             const chat = Chat.query()
                 .where('id', chatId)
 
@@ -102,7 +89,7 @@ module.exports = (http) => {
                 })
         })
 
-        socket.on("chats/users/add", async (chatId, data, callback) => {
+        socket.on('chats/users/add', async (chatId, data, callback) => {
             const usersIds = JSON.parse(data)
 
             const chat = await Chat.query()
@@ -120,14 +107,17 @@ module.exports = (http) => {
             callback()
         })
 
-        socket.on('messages/last', (chatId, callback) => {
-            Message.query()
-                .findOne('chat_id', chatId)
-                .orderBy('time', 'DESC')
-                .then(data => callback(data))
-        })
+        socket.on('chats/users/delete', async (chatId, userId, callback) => {
+            await Chat.relatedQuery('users')
+                    .for(chatId)
+                    .unrelate()
+                    .where('user_id', userId);
 
-        socket.on("chats", async (chatId, callback) => {
+            callback()
+            io.to(chatId).emit('chats/add', chatId)
+        })
+        
+        socket.on('chats', async (chatId, callback) => {
 
             const userId = socket.user.userId
 
@@ -147,7 +137,7 @@ module.exports = (http) => {
             callback(chat[0])
         })
 
-        socket.on("chats/add", async (data, callback) => {
+        socket.on('chats/add', async (data, callback) => {
             const userId = socket.user.userId
 
             const usersIds = JSON.parse(data)
@@ -169,7 +159,7 @@ module.exports = (http) => {
         
             for (let userId of usersIds) {
                 const user = await User.query()
-                    .where("id", userId)
+                    .where('id', userId)
                     .select('id', 'nickname', 'name', 'surname', 'image_url')
                 users.push(user[0])
             }
@@ -186,7 +176,7 @@ module.exports = (http) => {
                 }
             }
         
-            const chat = await Chat.query().insert({ title: null })
+            const chat = await Chat.query().insert({ title: null, user_id: socket.user.userId })
         
             for (let userId of usersIds) {
                 io.to('u' + userId).emit('join', userId)
@@ -198,17 +188,67 @@ module.exports = (http) => {
             callback({ ...chat, users })
         })
 
-        socket.on("chats/messages/before", (chatId, before, page, callback) => {
+        socket.on('chats/messages/before', (chatId, before, page, callback) => {
             Message.query()
             .where('chat_id', chatId)
             .where('time', '<', before)
             .orderBy('time', 'desc')
             .page(page, 10)
-            .catch(err => console.log(err))
-            .then(data => callback(data.results))
+            .then(data => {
+                if (data.results) callback(data.results)
+                else callback([])
+            })
         })
 
-        socket.on("messages/delete", async (messageId) => {
+
+
+
+        socket.on('users', (userId, callback) => {
+            User.query()
+                .select('id', 'nickname', 'name', 'surname', 'image_url')
+                .findOne('id', userId)
+                .then(data => callback(data))
+        })
+
+        socket.on('users/search', (q, page, callback) => {
+            const userId = socket.user.userId
+            User.query()
+                .select('id', 'nickname', 'name', 'surname', 'image_url')
+                .where('nickname', 'like', q + '%')
+                .where('id', '!=', userId)
+                .page(page, 10)
+                .then(data => {
+                    callback(data.results)
+                })
+        })
+
+
+
+
+        socket.on('messages', (msg, callback) => {
+            var message = {
+                chat_id: msg.chatId,
+                user_id: socket.user.userId,
+                data: msg.data,
+                type: msg.type,
+                time: msg.time
+            }
+            Message.query()
+                .insert(message)
+                .then(data => {
+                    callback(data)
+                    io.to(data.chat_id).emit('message', data)
+                })
+        })
+
+        socket.on('messages/edit', async (id, data, callback) => {
+            var message = await Message.query()
+                .patchAndFetchById(id, {data})
+            callback(message)
+            io.to(message.chat_id).emit('message/update', message)
+        })
+
+        socket.on('messages/delete', async (messageId) => {
 
             if (messageId == -1) return
 
@@ -226,34 +266,53 @@ module.exports = (http) => {
                 })
         })
 
-        socket.on("users", (userId, callback) => {
-            User.query()
-                .select('id', 'nickname', 'name', 'surname', 'image_url')
-                .findOne('id', userId)
+        socket.on('messages/last', (chatId, callback) => {
+            Message.query()
+                .findOne('chat_id', chatId)
+                .orderBy('time', 'DESC')
                 .then(data => callback(data))
         })
 
-        socket.on("users/search", (q, page, callback) => {
-            const userId = socket.user.userId
-            User.query()
-                .select('id', 'nickname', 'name', 'surname', 'image_url')
-                .where('nickname', 'like', q + '%')
-                .where('id', '!=', userId)
-                .page(page, 10)
-                .then(data => {
-                    callback(data.results)
-                })
+
+        socket.on('image', (image, callback) => {
+
+            fs.writeFile('public/' + image.path, image.imageData, 'base64', async function(err) {
+                if(err) return
+
+                var user = await User.query()
+                    .findById(socket.user.userId)
+                    .patchAndFetchById(socket.user.userId, {image_url: 'http://192.168.88.254:3000/' + image.path})
+
+                callback(user)
+            }); 
+            
+        })
+
+        socket.on('image/delete', async (callback) => {
+
+            var user = await User.query()
+                .findById(socket.user.userId)
+
+            if (!user) return
+
+            fs.unlink('public/' + user.image_url.split('/')[3], async function(err) {
+                if(err) return
+
+                var user = await User.query()
+                    .findById(socket.user.userId)
+                    .patchAndFetchById(socket.user.userId, {image_url: null})
+
+                callback(user)
+            })
+
         })
 
 
 
-
-
-
-
+        
 
         // UNUSED
-        socket.on("chats/messages/after", (chatId, after, page, callback) => {
+        socket.on('chats/messages/after', (chatId, after, page, callback) => {
             Message.query()
                 .where('chat_id', chatId)
                 .where('time', '>', after)
