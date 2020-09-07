@@ -47,9 +47,9 @@ module.exports = (http) => {
             const chat = await Chat.query()
                 .findOne('id', chatId)
         
-            chat.users = await Chat.relatedQuery('users')
-                .for(chat)
-                .select('id', 'nickname', 'name', 'surname', 'image_url')
+            // chat.users = await Chat.relatedQuery('users')
+            //     .for(chat)
+            //     .select('id', 'nickname', 'name', 'surname', 'image_url')
 
             callback(chat)
         })
@@ -131,7 +131,17 @@ module.exports = (http) => {
 
 
 
+        socket.on('chats/users', (chatId, callback) => {
+            const chat = Chat.query()
+                .where('id', chatId)
 
+            Chat.relatedQuery('users')
+                .for(chat)
+                .select('id', 'nickname', 'name', 'surname', 'image_url')
+                .then(data => {
+                    callback(data)
+                })
+        })
 
         socket.on('chats/users/search', (chatId, q, page, callback) => {
             const chat = Chat.query()
@@ -233,14 +243,16 @@ module.exports = (http) => {
                 const [value] = Object.values(m)
                 var message = await Message.query().findOne('id', value)
                 if (!message) continue
-                var chat = await Chat.query().findOne('id', message.chat_id)
-                var users = await Chat.relatedQuery('users')
-                    .for(message.chat_id)
-                    .select('id', 'nickname', 'name', 'surname', 'image_url')
-                result.push({id: chat.id, title: chat.title, userId: chat.user_id, message, users})
+                // var chat = await Chat.query().findOne('id', message.chat_id)
+                // var users = await Chat.relatedQuery('users')
+                //     .for(message.chat_id)
+                //     .select('id', 'nickname', 'name', 'surname', 'image_url')
+                // result.push({id: chat.id, title: chat.title, userId: chat.user_id, message, users})
+
+                result.push(message)
             }
 
-            callback(result.sort((o1, o2) => o2.message.time - o1.message.time))
+            callback(result.sort((o1, o2) => o2.time - o1.time))
         })
 
 
@@ -321,7 +333,7 @@ module.exports = (http) => {
                 .insert(message)
                 .then(data => {
                     callback(data)
-                    io.to(data.chat_id).emit('message', data)
+                    io.to(data.chat_id).emit('messages', data)
                 })
         })
 
@@ -329,7 +341,7 @@ module.exports = (http) => {
             var message = await Message.query()
                 .patchAndFetchById(id, {data})
             callback(message)
-            io.to(message.chat_id).emit('message/update', message)
+            io.to(message.chat_id).emit('messages/update', message)
         })
 
         socket.on('messages/delete', async (messageId) => {
@@ -346,7 +358,7 @@ module.exports = (http) => {
                 .delete()
                 .where('id', messageId)
                 .then(_ => {
-                    io.to(chat[0].chat_id).emit('message/delete', messageId)
+                    io.to(chat[0].chat_id).emit('messages/delete', messageId)
                 })
         })
 
