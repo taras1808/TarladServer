@@ -3,7 +3,6 @@ const Message = require('./models/Message')
 const Chat = require('./models/Chat')
 const jwt = require('jsonwebtoken')
 var fs = require('fs')
-var sizeOf = require('image-size');
 
 module.exports = (http) => {
     const io = require('socket.io')(http)
@@ -72,15 +71,6 @@ module.exports = (http) => {
 
             usersIds.push(userId)
         
-            const users = []
-        
-            for (let userId of usersIds) {
-                const user = await User.query()
-                    .findOne('id', userId)
-                    .select('id', 'nickname', 'name', 'surname', 'image_url')
-                users.push(user)
-            }
-        
             for (let chat of chats) {
         
                 const usersIdsForChat = await Chat.relatedQuery('users')
@@ -88,7 +78,7 @@ module.exports = (http) => {
                     .select('id')
         
                 if (arraysEqual(usersIdsForChat.map(e => e.id), usersIds)) {
-                    callback({ ...chat, users})
+                    callback(chat)
                     return;
                 }
             }
@@ -102,7 +92,7 @@ module.exports = (http) => {
                     .relate(userId);
             }
 
-            callback({ ...chat, users })
+            callback(chat)
         })
 
         socket.on('chats/title', async (chatId, title, callback) => {
@@ -197,7 +187,7 @@ module.exports = (http) => {
                     .unrelate()
                     .where('user_id', userId);
 
-            callback()
+            callback(0)
             io.to('u' + userId).emit('join')
             io.to(chatId).emit('chats/update', chatId)
         })
@@ -243,12 +233,6 @@ module.exports = (http) => {
                 const [value] = Object.values(m)
                 var message = await Message.query().findOne('id', value)
                 if (!message) continue
-                // var chat = await Chat.query().findOne('id', message.chat_id)
-                // var users = await Chat.relatedQuery('users')
-                //     .for(message.chat_id)
-                //     .select('id', 'nickname', 'name', 'surname', 'image_url')
-                // result.push({id: chat.id, title: chat.title, userId: chat.user_id, message, users})
-
                 result.push(message)
             }
 
@@ -262,7 +246,10 @@ module.exports = (http) => {
             User.query()
                 .select('id', 'nickname', 'name', 'surname', 'image_url')
                 .findOne('id', userId)
-                .then(data => callback(data))
+                .then(data => {
+                    if(data) callback(data)
+                    else callback()
+                })
         })
 
         socket.on('users/search', (q, page, callback) => {
@@ -277,18 +264,12 @@ module.exports = (http) => {
                 })
         })
 
-        socket.on('users/images', (image, callback) => {
+        socket.on('users/images', async (imagePath, callback) => {
+            var user = await User.query()
+                .findById(socket.user.userId)
+                .patchAndFetchById(socket.user.userId, {image_url: imagePath})
 
-            fs.writeFile('public/' + image.path, image.imageData, 'base64', async function(err) {
-                if(err) return
-
-                var user = await User.query()
-                    .findById(socket.user.userId)
-                    .patchAndFetchById(socket.user.userId, {image_url: 'http://192.168.1.114:3000/' + image.path})
-
-                callback(user)
-            }); 
-            
+            callback(user)
         })
 
         socket.on('users/images/delete', async (callback) => {
@@ -298,7 +279,7 @@ module.exports = (http) => {
 
             if (!user) return
 
-            fs.unlink('public/' + user.image_url.split('/')[3], async function(err) {
+            fs.unlink('public/uploads/' + user.image_url.split('/')[4], async function(err) {
                 if(err) return
 
                 var user = await User.query()
@@ -366,18 +347,12 @@ module.exports = (http) => {
             Message.query()
                 .findOne('chat_id', chatId)
                 .orderBy('time', 'DESC')
-                .then(data => callback(data))
-        })
-
-
-        socket.on('images', (image, callback) => {
-            fs.writeFile('public/' + image.path, image.imageData, 'base64', async function(err) {
-                if(err) return
-                sizeOf('public/' + image.path, function (_, dimensions) {
-                    callback('{url: "http://192.168.1.114:3000/' + image.path + '", width: ' + dimensions.width + ', height: ' + dimensions.height + '}')
+                .then(data => {
+                    if (data) callback(data)
+                    else callback()
                 })
-            })
         })
+
 
 
 
