@@ -39,7 +39,6 @@ module.exports = (http) => {
                 })
         })
 
-        
 
         socket.on('chats', async (chatId, callback) => {
 
@@ -252,6 +251,13 @@ module.exports = (http) => {
                 })
         })
 
+        socket.on('users/update', async (nickname, name, surname, callback) => {
+            var user = await User.query()
+                .patchAndFetchById(socket.user.userId, {nickname, name, surname})
+
+            callback(user)
+        })
+
         socket.on('users/search', (q, page, callback) => {
             const userId = socket.user.userId
             User.query()
@@ -266,7 +272,6 @@ module.exports = (http) => {
 
         socket.on('users/images', async (imagePath, callback) => {
             var user = await User.query()
-                .findById(socket.user.userId)
                 .patchAndFetchById(socket.user.userId, {image_url: imagePath})
 
             callback(user)
