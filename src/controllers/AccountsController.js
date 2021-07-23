@@ -144,7 +144,7 @@ exports.authorize = async (req, res) => {
 				refreshToken: {
 					value: data.value,
 					userId: data.user_id,
-				} 
+				}
 			})
 		}).catch(err => 
 			res.status(500).send({

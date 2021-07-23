@@ -42,12 +42,17 @@ module.exports = (http) => {
 
         socket.on('chats', async (chatId, callback) => {
 
+            var checkChat = await Chat.relatedQuery('users')
+                .for(Chat.query().findOne('id', chatId))
+                .where('user_id', socket.user.userId)
+
+            if (checkChat.length == 0) {
+                callback()
+                return
+            }
+            
             const chat = await Chat.query()
                 .findOne('id', chatId)
-        
-            // chat.users = await Chat.relatedQuery('users')
-            //     .for(chat)
-            //     .select('id', 'nickname', 'name', 'surname', 'image_url')
 
             callback(chat)
         })
@@ -120,7 +125,17 @@ module.exports = (http) => {
 
 
 
-        socket.on('chats/users', (chatId, callback) => {
+        socket.on('chats/users', async (chatId, callback) => {
+
+            var checkChat = await Chat.relatedQuery('users')
+                .for(Chat.query().findOne('id', chatId))
+                .where('user_id', socket.user.userId)
+
+            if (checkChat.length == 0) {
+                callback()
+                return
+            }
+            
             const chat = Chat.query()
                 .where('id', chatId)
 
@@ -235,7 +250,8 @@ module.exports = (http) => {
                 result.push(message)
             }
 
-            callback(result.sort((o1, o2) => o2.time - o1.time))
+            if (result.length > 0) callback(result.sort((o1, o2) => o2.time - o1.time))
+            else callback()
         })
 
 
