@@ -1,7 +1,7 @@
 const Message = require('../models/Message')
 const Chat = require('../models/Chat')
 
-exports.messages = async (msg, callback) => {
+exports.messages = (socket) => async (msg, callback) => {
     var checkChat = await Chat.relatedQuery('users')
         .for(Chat.query().findOne('id', msg.chatId))
         .where('user_id', socket.user.userId)

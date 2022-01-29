@@ -11,14 +11,14 @@ exports.users = (userId, callback) => {
         })
 }
 
-exports.usersUpdate = async (nickname, name, surname, callback) => {
+exports.usersUpdate = (socket) => async (nickname, name, surname, callback) => {
     var user = await User.query()
         .patchAndFetchById(socket.user.userId, { nickname, name, surname })
 
     callback(user)
 }
 
-exports.usersSearch = async (q, page, callback) => {
+exports.usersSearch = (socket) => async (q, page, callback) => {
     const userId = socket.user.userId
     User.query()
         .select('id', 'nickname', 'name', 'surname', 'image_url')
@@ -30,13 +30,13 @@ exports.usersSearch = async (q, page, callback) => {
         })
 }
 
-exports.usersImages = async (imagePath, callback) => {
+exports.usersImages = (socket) => async (imagePath, callback) => {
     var user = await User.query()
         .patchAndFetchById(socket.user.userId, { image_url: imagePath })
     callback(user)
 }
 
-exports.usersImagesDelete = async (callback) => {
+exports.usersImagesDelete = (socket) => async (callback) => {
     var user = await User.query()
         .findById(socket.user.userId)
     if (!user) return

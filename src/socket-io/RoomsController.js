@@ -1,3 +1,5 @@
+const User = require('../models/User')
+
 exports.join = (socket) => () => {
     socket.leaveAll()
     socket.join('u' + socket.user.userId)
