@@ -1,7 +1,7 @@
 const Message = require('../models/Message')
 const Chat = require('../models/Chat')
 
-exports.messages = (socket) => async (msg, callback) => {
+exports.messages = (io, socket) => async (msg, callback) => {
     var checkChat = await Chat.relatedQuery('users')
         .for(Chat.query().findOne('id', msg.chatId))
         .where('user_id', socket.user.userId)
@@ -24,14 +24,14 @@ exports.messages = (socket) => async (msg, callback) => {
         })
 }
 
-exports.messagesEdit = async (id, data, callback) => {
+exports.messagesEdit = (io) => async (id, data, callback) => {
     var message = await Message.query()
         .patchAndFetchById(id, { data })
     callback(message)
     io.to(message.chat_id).emit('messages/update', message)
 }
 
-exports.messagesDelete = async (messageId) => {
+exports.messagesDelete = (io) => async (messageId) => {
     if (messageId == -1) return
     var chat = await Message.query()
         .select('chat_id')

@@ -15,7 +15,7 @@ exports.chats = (socket) => async (chatId, callback) => {
     callback(chat)
 }
 
-exports.chatsCreate = (socket) => async (data, callback) => {
+exports.chatsCreate = (io, socket) => async (data, callback) => {
     const userId = socket.user.userId
     const usersIds = JSON.parse(data)
     if (usersIds.length < 1 || usersIds.length > 63) {
@@ -46,7 +46,7 @@ exports.chatsCreate = (socket) => async (data, callback) => {
     callback(chat)
 }
 
-exports.chatsTitle = (socket) => async (chatId, title, callback) => {
+exports.chatsTitle = (io, socket) => async (chatId, title, callback) => {
     var checkChat = await Chat.relatedQuery('users')
         .for(Chat.query().findOne('id', chatId))
         .where('user_id', socket.user.userId)
@@ -101,7 +101,7 @@ exports.chatsUsersSearch = (socket) => (chatId, q, page, callback) => {
         })
 }
 
-exports.chatsUsersAdd = (socket) => async (chatId, data, callback) => {
+exports.chatsUsersAdd = (io, socket) => async (chatId, data, callback) => {
     var checkChat = await Chat.relatedQuery('users')
         .for(Chat.query().findOne('id', chatId))
         .where('user_id', socket.user.userId)
@@ -123,7 +123,7 @@ exports.chatsUsersAdd = (socket) => async (chatId, data, callback) => {
     callback(0)
 }
 
-exports.chatsUsersDelete = async (chatId, userId, callback) => {
+exports.chatsUsersDelete = (io) => async (chatId, userId, callback) => {
     await Chat.relatedQuery('users')
         .for(chatId)
         .unrelate()
