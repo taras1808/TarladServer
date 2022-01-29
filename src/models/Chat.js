@@ -1,15 +1,16 @@
 const { Model } = require('objection')
 
 class Chat extends Model {
+
 	static get tableName() {
 		return 'chat';
 	}
-	
+
 	static get idColumn() {
 		return 'id';
-    }
-      
-    static get relationMappings() {
+	}
+
+	static get relationMappings() {
 		const User = require('./User')
 		const Message = require('./Message')
 		return {

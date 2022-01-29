@@ -18,9 +18,8 @@
     "objection": "^2.2.0",
     "pug": "^3.0.0",
     "sequelize": "^6.2.3",
-    "socket.io": "^2.3.0"
+    "socket.io": "^4.4.1"
   },
-  "devDependencies": {},
   "scripts": {
     "start": "nodemon",
     "test": "echo \"Error: no test specified\" && exit 1"
